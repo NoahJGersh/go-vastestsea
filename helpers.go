@@ -34,10 +34,13 @@ func writeResponse[T any](res T, w http.ResponseWriter, status int) {
 	data, err := json.Marshal(res)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(status)
+	if status != http.StatusOK {
+		w.WriteHeader(status)
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Write(data)
 }
