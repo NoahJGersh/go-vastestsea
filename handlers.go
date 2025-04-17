@@ -11,8 +11,24 @@ import (
  * Languages
  */
 
-func (cfg *apiConfig) getLanguages(w http.ResponseWriter, _ *http.Request) {
-	respondError("Not yet implemented", w, http.StatusNotImplemented)
+func (cfg *apiConfig) getLanguages(w http.ResponseWriter, r *http.Request) {
+	languages, err := cfg.queries.GetLanguages(r.Context())
+	if err != nil {
+		respondError("No languages found", w, http.StatusNotFound)
+		return
+	}
+
+	marshallableLanguages := []Language{}
+	for _, language := range languages {
+		marshallableLanguages = append(marshallableLanguages, Language{
+			ID:        language.ID,
+			Name:      language.Name,
+			CreatedAt: language.CreatedAt,
+			UpdatedAt: language.UpdatedAt,
+		})
+	}
+
+	writeResponse(marshallableLanguages, w, http.StatusOK)
 }
 
 func (cfg *apiConfig) getLanguage(w http.ResponseWriter, r *http.Request) {
@@ -22,8 +38,6 @@ func (cfg *apiConfig) getLanguage(w http.ResponseWriter, r *http.Request) {
 		respondError("Language not found", w, http.StatusNotFound)
 		return
 	}
-
-	fmt.Println(language)
 
 	marshallableLanguage := Language{
 		ID:        language.ID,

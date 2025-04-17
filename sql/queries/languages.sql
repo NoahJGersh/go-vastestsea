@@ -8,6 +8,9 @@ VALUES (
 )
 RETURNING *;
 
+-- name: GetLanguages :many
+SELECT * FROM languages;
+
 -- name: GetLanguage :one
 SELECT * FROM languages
 WHERE LOWER(name) = $1;

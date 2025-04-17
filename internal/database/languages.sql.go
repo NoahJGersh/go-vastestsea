@@ -48,3 +48,35 @@ func (q *Queries) GetLanguage(ctx context.Context, name string) (Language, error
 	)
 	return i, err
 }
+
+const getLanguages = `-- name: GetLanguages :many
+SELECT id, created_at, updated_at, name FROM languages
+`
+
+func (q *Queries) GetLanguages(ctx context.Context) ([]Language, error) {
+	rows, err := q.db.QueryContext(ctx, getLanguages)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Language
+	for rows.Next() {
+		var i Language
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
