@@ -14,3 +14,11 @@ SELECT * FROM languages;
 -- name: GetLanguage :one
 SELECT * FROM languages
 WHERE LOWER(name) = $1;
+
+-- name: GetLanguageByID :one
+SELECT * FROM languages
+WHERE id = $1;
+
+-- name: DeleteLanguage :exec
+DELETE FROM languages
+WHERE id = $1;

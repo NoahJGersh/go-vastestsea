@@ -5,6 +5,7 @@
 package database
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,4 +16,13 @@ type Language struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Name      string
+}
+
+type Word struct {
+	ID            uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	Word          string
+	FontFormatted sql.NullString
+	LanguageID    uuid.UUID
 }

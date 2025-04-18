@@ -35,6 +35,12 @@ func main() {
 	serveMux.HandleFunc("GET /vs/languages", apiCfg.getLanguages)
 	serveMux.HandleFunc("POST /vs/languages", apiCfg.createLanguage)
 	serveMux.HandleFunc("GET /vs/languages/{language}", apiCfg.getLanguage)
+	serveMux.HandleFunc("GET /vs/languages/{language}/words", apiCfg.getWordsFromLanguage)
+	serveMux.HandleFunc("POST /vs/languages/{language}/words", apiCfg.createWordForLanguage)
+	serveMux.HandleFunc("GET /vs/languages/{language}/words/{word}", apiCfg.getWordFromLanguage)
+	serveMux.HandleFunc("GET /vs/languages/words", apiCfg.getWords)
+	serveMux.HandleFunc("POST /vs/languages/words", apiCfg.createWord)
+	serveMux.HandleFunc("GET localhost/vs/languages/words/{word}", apiCfg.getWord)
 
 	// Run server
 	server := http.Server{

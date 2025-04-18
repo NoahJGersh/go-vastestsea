@@ -7,6 +7,8 @@ package database
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 const createLanguage = `-- name: CreateLanguage :one
@@ -32,6 +34,16 @@ func (q *Queries) CreateLanguage(ctx context.Context, name string) (Language, er
 	return i, err
 }
 
+const deleteLanguage = `-- name: DeleteLanguage :exec
+DELETE FROM languages
+WHERE id = $1
+`
+
+func (q *Queries) DeleteLanguage(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteLanguage, id)
+	return err
+}
+
 const getLanguage = `-- name: GetLanguage :one
 SELECT id, created_at, updated_at, name FROM languages
 WHERE LOWER(name) = $1
@@ -39,6 +51,23 @@ WHERE LOWER(name) = $1
 
 func (q *Queries) GetLanguage(ctx context.Context, name string) (Language, error) {
 	row := q.db.QueryRowContext(ctx, getLanguage, name)
+	var i Language
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+	)
+	return i, err
+}
+
+const getLanguageByID = `-- name: GetLanguageByID :one
+SELECT id, created_at, updated_at, name FROM languages
+WHERE id = $1
+`
+
+func (q *Queries) GetLanguageByID(ctx context.Context, id uuid.UUID) (Language, error) {
+	row := q.db.QueryRowContext(ctx, getLanguageByID, id)
 	var i Language
 	err := row.Scan(
 		&i.ID,
