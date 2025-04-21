@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"vastestsea/internal/database"
@@ -93,7 +94,7 @@ func (cfg *apiConfig) getWordsFromLanguage(w http.ResponseWriter, r *http.Reques
 
 	marshallableWords := []Word{}
 	for _, word := range words {
-		marshallableWords = append(marshallableWords, getMarshallableWord(word))
+		marshallableWords = append(marshallableWords, getMarshallableWord(word, []database.Definition{}))
 	}
 
 	writeResponse(marshallableWords, w, http.StatusOK)
@@ -119,20 +120,29 @@ func (cfg *apiConfig) getWordFromLanguage(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeResponse(getMarshallableWord(word), w, http.StatusOK)
+	definitions, _ := cfg.queries.GetDefinitionsOfWord(r.Context(), word.ID)
+
+	writeResponse(getMarshallableWord(word, definitions), w, http.StatusOK)
 }
 
 // Get all words registered to any language.
 func (cfg *apiConfig) getWords(w http.ResponseWriter, r *http.Request) {
 	words, err := cfg.queries.GetWords(r.Context())
 	if err != nil {
+		log.Println(err.Error())
 		respondError("No words found", w, http.StatusNotFound)
 		return
 	}
 
 	marshallableWords := []Word{}
 	for _, word := range words {
-		marshallableWords = append(marshallableWords, getMarshallableWord(word))
+		marshallableWord := getMarshallableWord(word, []database.Definition{})
+
+		if definitions, err := cfg.queries.GetDefinitionsOfWord(r.Context(), word.ID); err != nil {
+			marshallableWord.Definitions = getMarshallableDefinitions(definitions)
+		}
+
+		marshallableWords = append(marshallableWords, marshallableWord)
 	}
 
 	writeResponse(marshallableWords, w, http.StatusOK)
@@ -153,7 +163,9 @@ func (cfg *apiConfig) getWord(w http.ResponseWriter, r *http.Request) {
 
 	marshallableWords := []Word{}
 	for _, word := range words {
-		marshallableWords = append(marshallableWords, getMarshallableWord(word))
+		definitions, _ := cfg.queries.GetDefinitionsOfWord(r.Context(), word.ID)
+
+		marshallableWords = append(marshallableWords, getMarshallableWord(word, definitions))
 	}
 
 	writeResponse(marshallableWords, w, http.StatusOK)
@@ -207,7 +219,7 @@ func (cfg *apiConfig) createWord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeResponse(getMarshallableWord(word), w, http.StatusCreated)
+	writeResponse(getMarshallableWord(word, []database.Definition{}), w, http.StatusCreated)
 }
 
 // Create a word for a given language.
@@ -249,5 +261,5 @@ func (cfg *apiConfig) createWordForLanguage(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	writeResponse(getMarshallableWord(word), w, http.StatusCreated)
+	writeResponse(getMarshallableWord(word, []database.Definition{}), w, http.StatusCreated)
 }

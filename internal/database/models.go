@@ -11,6 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
+type Definition struct {
+	ID           uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	Content      string
+	PartOfSpeech string
+	WordID       uuid.UUID
+}
+
 type Language struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
