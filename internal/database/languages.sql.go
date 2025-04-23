@@ -109,3 +109,27 @@ func (q *Queries) GetLanguages(ctx context.Context) ([]Language, error) {
 	}
 	return items, nil
 }
+
+const updateLanguageName = `-- name: UpdateLanguageName :one
+UPDATE languages
+SET name = $1
+WHERE name = $2
+RETURNING id, created_at, updated_at, name
+`
+
+type UpdateLanguageNameParams struct {
+	Name   string
+	Name_2 string
+}
+
+func (q *Queries) UpdateLanguageName(ctx context.Context, arg UpdateLanguageNameParams) (Language, error) {
+	row := q.db.QueryRowContext(ctx, updateLanguageName, arg.Name, arg.Name_2)
+	var i Language
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+	)
+	return i, err
+}

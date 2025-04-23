@@ -35,6 +35,7 @@ func main() {
 	serveMux.HandleFunc("GET /vs/languages", apiCfg.getLanguages)
 	serveMux.HandleFunc("POST /vs/languages", apiCfg.createLanguage)
 	serveMux.HandleFunc("GET /vs/languages/{language}", apiCfg.getLanguage)
+	serveMux.HandleFunc("PUT /vs/languages/{language}", apiCfg.updateLanguage)
 	serveMux.HandleFunc("GET /vs/languages/{language}/words", apiCfg.getWordsFromLanguage)
 	serveMux.HandleFunc("POST /vs/languages/{language}/words", apiCfg.createWordForLanguage)
 	serveMux.HandleFunc("GET /vs/languages/{language}/words/{word}", apiCfg.getWordFromLanguage)

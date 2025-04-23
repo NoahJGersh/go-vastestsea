@@ -73,6 +73,36 @@ func (cfg *apiConfig) createLanguage(w http.ResponseWriter, r *http.Request) {
 	writeResponse(getMarshallableLanguage(language), w, http.StatusCreated)
 }
 
+func (cfg *apiConfig) updateLanguage(w http.ResponseWriter, r *http.Request) {
+	languageName := r.PathValue("language")
+
+	type reqParams struct {
+		Name string `json:"name"`
+	}
+
+	params := reqParams{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&params); err != nil {
+		respondError(
+			fmt.Sprintf("Could not decode request body: %s", err),
+			w,
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	language, err := cfg.queries.UpdateLanguageName(r.Context(), database.UpdateLanguageNameParams{
+		Name:   params.Name,
+		Name_2: languageName,
+	})
+	if err != nil {
+		cfg.createLanguage(w, r)
+		return
+	}
+
+	writeResponse(getMarshallableLanguage(language), w, http.StatusOK)
+}
+
 /*
  * Word Handlers
  */

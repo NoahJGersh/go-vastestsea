@@ -22,3 +22,9 @@ WHERE id = $1;
 -- name: DeleteLanguage :exec
 DELETE FROM languages
 WHERE id = $1;
+
+-- name: UpdateLanguageName :one
+UPDATE languages
+SET name = $1
+WHERE LOWER(name) = $2
+RETURNING *;
