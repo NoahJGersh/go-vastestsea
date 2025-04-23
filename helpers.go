@@ -60,3 +60,12 @@ func getFailedCreationCode(err error) int {
 
 	return http.StatusInternalServerError
 }
+
+// Constructs an authenticated endpoint
+func (cfg *apiConfig) getAuthenticatedHandler(
+	handlerFunc func(w http.ResponseWriter, r *http.Request),
+) http.Handler {
+	return cfg.auth.AuthenticateAPIKey(
+		http.HandlerFunc(handlerFunc),
+	)
+}

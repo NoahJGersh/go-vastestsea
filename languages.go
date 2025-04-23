@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"vastestsea/internal/database"
+
+	"github.com/google/uuid"
 )
 
 /*
@@ -51,7 +53,7 @@ func (cfg *apiConfig) createLanguage(w http.ResponseWriter, r *http.Request) {
 	params := reqParams{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&params); err != nil {
-		respondError("Could not decode request body", w, http.StatusBadRequest)
+		respondError(fmt.Sprintf("Could not decode request body: %s", err), w, http.StatusBadRequest)
 		return
 	}
 
@@ -96,11 +98,47 @@ func (cfg *apiConfig) updateLanguage(w http.ResponseWriter, r *http.Request) {
 		Name_2: languageName,
 	})
 	if err != nil {
-		cfg.createLanguage(w, r)
+		language, err = cfg.queries.CreateLanguage(r.Context(), params.Name)
+		if err != nil {
+			respondError(
+				fmt.Sprintf("Failed to create language: %s", err),
+				w,
+				getFailedCreationCode(err),
+			)
+			return
+		}
+		writeResponse(getMarshallableLanguage(language), w, http.StatusCreated)
 		return
 	}
 
 	writeResponse(getMarshallableLanguage(language), w, http.StatusOK)
+}
+
+func (cfg *apiConfig) deleteLanguage(w http.ResponseWriter, r *http.Request) {
+	type reqParams struct {
+		ID uuid.UUID `json:"id"`
+	}
+
+	params := reqParams{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&params); err != nil {
+		respondError(
+			fmt.Sprintf("Could not decode request body: %s", err),
+			w,
+			http.StatusBadRequest,
+		)
+	}
+
+	err := cfg.queries.DeleteLanguage(r.Context(), params.ID)
+	if err != nil {
+		respondError(
+			fmt.Sprintf("Could not delete language: %s", err),
+			w,
+			http.StatusNotFound,
+		)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 /*

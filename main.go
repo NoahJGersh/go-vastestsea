@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"vastestsea/internal/auth"
 	"vastestsea/internal/database"
 
 	"github.com/joho/godotenv"
@@ -14,6 +15,7 @@ import (
 
 type apiConfig struct {
 	queries *database.Queries
+	auth    auth.AuthConfig
 }
 
 func main() {
@@ -28,20 +30,26 @@ func main() {
 
 	apiCfg := apiConfig{
 		queries: dbQueries,
+		auth: auth.AuthConfig{
+			ApiKey: os.Getenv("API_KEY"),
+		},
 	}
 
 	// Construct mux
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("GET /vs/languages", apiCfg.getLanguages)
-	serveMux.HandleFunc("POST /vs/languages", apiCfg.createLanguage)
 	serveMux.HandleFunc("GET /vs/languages/{language}", apiCfg.getLanguage)
-	serveMux.HandleFunc("PUT /vs/languages/{language}", apiCfg.updateLanguage)
 	serveMux.HandleFunc("GET /vs/languages/{language}/words", apiCfg.getWordsFromLanguage)
-	serveMux.HandleFunc("POST /vs/languages/{language}/words", apiCfg.createWordForLanguage)
 	serveMux.HandleFunc("GET /vs/languages/{language}/words/{word}", apiCfg.getWordFromLanguage)
 	serveMux.HandleFunc("GET /vs/languages/words", apiCfg.getWords)
-	serveMux.HandleFunc("POST /vs/languages/words", apiCfg.createWord)
 	serveMux.HandleFunc("GET localhost/vs/languages/words/{word}", apiCfg.getWord)
+
+	// Authenticated endpoints
+	serveMux.Handle("POST /vs/languages", apiCfg.getAuthenticatedHandler(apiCfg.createLanguage))
+	serveMux.Handle("DELETE /vs/languages", apiCfg.getAuthenticatedHandler(apiCfg.deleteLanguage))
+	serveMux.Handle("PUT /vs/languages/{language}", apiCfg.getAuthenticatedHandler(apiCfg.updateLanguage))
+	serveMux.Handle("POST /vs/languages/{language}/words", apiCfg.getAuthenticatedHandler(apiCfg.createWordForLanguage))
+	serveMux.Handle("POST /vs/languages/words", apiCfg.getAuthenticatedHandler(apiCfg.createWord))
 
 	// Run server
 	server := http.Server{
