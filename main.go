@@ -63,6 +63,7 @@ func main() {
 	serveMux.Handle("DELETE /vs/languages", apiCfg.getAuthenticatedHandler(apiCfg.deleteLanguage))
 	serveMux.Handle("PUT /vs/languages/{language}", apiCfg.getAuthenticatedHandler(apiCfg.updateLanguage))
 	serveMux.Handle("POST /vs/languages/{language}/words", apiCfg.getAuthenticatedHandler(apiCfg.createWordForLanguage))
+	serveMux.Handle("DELETE /vs/languages/{language}/words/{word}", apiCfg.getAuthenticatedHandler(apiCfg.deleteWordFromLanguage))
 	serveMux.Handle("POST /vs/languages/words", apiCfg.getAuthenticatedHandler(apiCfg.createWord))
 
 	// Run server

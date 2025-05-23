@@ -113,7 +113,7 @@ func (q *Queries) GetLanguages(ctx context.Context) ([]Language, error) {
 const updateLanguageName = `-- name: UpdateLanguageName :one
 UPDATE languages
 SET name = $1
-WHERE name = $2
+WHERE LOWER(name) = $2
 RETURNING id, created_at, updated_at, name
 `
 

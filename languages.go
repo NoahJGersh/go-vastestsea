@@ -184,7 +184,7 @@ func (cfg *apiConfig) getWordFromLanguage(w http.ResponseWriter, r *http.Request
 		LanguageID: language.ID,
 	})
 	if err != nil {
-		respondError("Word not found for that language", w, http.StatusNotFound)
+		respondError("Word not found", w, http.StatusNotFound)
 		return
 	}
 
@@ -330,4 +330,35 @@ func (cfg *apiConfig) createWordForLanguage(w http.ResponseWriter, r *http.Reque
 	}
 
 	writeResponse(getMarshallableWord(word, []database.Definition{}), w, http.StatusCreated)
+}
+
+func (cfg *apiConfig) deleteWordFromLanguage(w http.ResponseWriter, r *http.Request) {
+	languageName := r.PathValue("language")
+	language, err := cfg.queries.GetLanguage(r.Context(), languageName)
+	if err != nil {
+		respondError("Language not found", w, http.StatusNotFound)
+		return
+	}
+
+	wordName := r.PathValue("word")
+	word, err := cfg.queries.GetWordFromLanguage(r.Context(), database.GetWordFromLanguageParams{
+		Word:       wordName,
+		LanguageID: language.ID,
+	})
+	if err != nil {
+		respondError("Word not found", w, http.StatusNotFound)
+		return
+	}
+
+	err = cfg.queries.DeleteWord(r.Context(), word.ID)
+	if err != nil {
+		respondError("Failed to delete word", w, http.StatusInternalServerError)
+		return
+	}
+
+	respondSuccess(
+		fmt.Sprintf("Successfully deleted word from %s", language.Name),
+		w,
+		http.StatusOK,
+	)
 }
