@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -14,13 +15,22 @@ import (
 )
 
 type apiConfig struct {
-	queries *database.Queries
-	auth    auth.AuthConfig
+	queries  *database.Queries
+	auth     auth.AuthConfig
+	hostName string
 }
 
 func main() {
-	// Setup db connection
+	// Establish env
+	env := os.Getenv("VS_ENV")
+	if env == "" {
+		env = "local"
+	}
+
+	godotenv.Load(".env." + env)
 	godotenv.Load()
+
+	// Setup db connection
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
@@ -33,6 +43,7 @@ func main() {
 		auth: auth.AuthConfig{
 			ApiKey: os.Getenv("API_KEY"),
 		},
+		hostName: os.Getenv("HOSTNAME"),
 	}
 
 	// Construct mux
@@ -42,7 +53,10 @@ func main() {
 	serveMux.HandleFunc("GET /vs/languages/{language}/words", apiCfg.getWordsFromLanguage)
 	serveMux.HandleFunc("GET /vs/languages/{language}/words/{word}", apiCfg.getWordFromLanguage)
 	serveMux.HandleFunc("GET /vs/languages/words", apiCfg.getWords)
-	serveMux.HandleFunc("GET localhost/vs/languages/words/{word}", apiCfg.getWord)
+	serveMux.HandleFunc(
+		fmt.Sprintf("GET %s/vs/languages/words/{word}", apiCfg.hostName),
+		apiCfg.getWord,
+	)
 
 	// Authenticated endpoints
 	serveMux.Handle("POST /vs/languages", apiCfg.getAuthenticatedHandler(apiCfg.createLanguage))
