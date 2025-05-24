@@ -233,18 +233,45 @@ func (q *Queries) GetWordsByLanguageID(ctx context.Context, languageID uuid.UUID
 	return items, nil
 }
 
-const updateWordFormatting = `-- name: UpdateWordFormatting :exec
+const updateWord = `-- name: UpdateWord :one
 UPDATE words
-SET font_formatted = $1
-WHERE id = $2
+SET 
+    word = CASE WHEN $1::bool
+        THEN $2::text
+        ELSE word
+        END,
+    font_formatted = CASE WHEN $3::bool
+        THEN $4::text
+        ELSE font_formatted
+        END
+WHERE id = $5
+RETURNING id, created_at, updated_at, word, font_formatted, language_id
 `
 
-type UpdateWordFormattingParams struct {
-	FontFormatted sql.NullString
-	ID            uuid.UUID
+type UpdateWordParams struct {
+	SetWord      bool
+	Word         string
+	SetFormatted bool
+	Formatted    string
+	ID           uuid.UUID
 }
 
-func (q *Queries) UpdateWordFormatting(ctx context.Context, arg UpdateWordFormattingParams) error {
-	_, err := q.db.ExecContext(ctx, updateWordFormatting, arg.FontFormatted, arg.ID)
-	return err
+func (q *Queries) UpdateWord(ctx context.Context, arg UpdateWordParams) (Word, error) {
+	row := q.db.QueryRowContext(ctx, updateWord,
+		arg.SetWord,
+		arg.Word,
+		arg.SetFormatted,
+		arg.Formatted,
+		arg.ID,
+	)
+	var i Word
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Word,
+		&i.FontFormatted,
+		&i.LanguageID,
+	)
+	return i, err
 }

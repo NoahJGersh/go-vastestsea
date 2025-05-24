@@ -40,10 +40,19 @@ SELECT * FROM words;
 SELECT * FROM words
 WHERE language_id = $1;
 
--- name: UpdateWordFormatting :exec
+-- name: UpdateWord :one
 UPDATE words
-SET font_formatted = $1
-WHERE id = $2;
+SET 
+    word = CASE WHEN @set_word::bool
+        THEN @word::text
+        ELSE word
+        END,
+    font_formatted = CASE WHEN @set_formatted::bool
+        THEN @formatted::text
+        ELSE font_formatted
+        END
+WHERE id = @id
+RETURNING *;
 
 -- name: DeleteWord :exec
 DELETE FROM words

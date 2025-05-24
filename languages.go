@@ -332,6 +332,104 @@ func (cfg *apiConfig) createWordForLanguage(w http.ResponseWriter, r *http.Reque
 	writeResponse(getMarshallableWord(word, []database.Definition{}), w, http.StatusCreated)
 }
 
+func (cfg *apiConfig) updateWord(w http.ResponseWriter, r *http.Request) {
+	languageName := r.PathValue("language")
+	language, err := cfg.queries.GetLanguage(r.Context(), languageName)
+	if err != nil {
+		respondError("Language not found", w, http.StatusNotFound)
+		return
+	}
+
+	isNewWord := false
+	wordName := r.PathValue("word")
+	word, err := cfg.queries.GetWordFromLanguage(r.Context(), database.GetWordFromLanguageParams{
+		Word:       wordName,
+		LanguageID: language.ID,
+	})
+	if err != nil {
+		word, err = cfg.queries.CreateWord(r.Context(), database.CreateWordParams{
+			Word:       wordName,
+			LanguageID: language.ID,
+		})
+		if err != nil {
+			respondError("Could not create word", w, http.StatusInternalServerError)
+			return
+		}
+		isNewWord = true
+	}
+
+	type reqParams struct {
+		Word       string `json:"word"`
+		Formatted  string `json:"formatted"`
+		Definition struct {
+			DeleteID uuid.UUID `json:"delete_id"`
+			Add      struct {
+				Content      string `json:"content"`
+				PartOfSpeech string `json:"part_of_speech"`
+			} `json:"add"`
+		} `json:"definition"`
+	}
+
+	params := reqParams{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&params); err != nil {
+		respondError("Could not decode request body", w, http.StatusInternalServerError)
+		return
+	}
+
+	if params.Definition.DeleteID != uuid.Nil {
+		err = cfg.queries.DeleteDefinition(r.Context(), params.Definition.DeleteID)
+		if err != nil {
+			respondError("Could not delete definition", w, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if fmt.Sprintf("%v", params.Definition.Add) != "{ }" {
+		_, err = cfg.queries.CreateDefinition(r.Context(), database.CreateDefinitionParams{
+			WordID:       word.ID,
+			Content:      params.Definition.Add.Content,
+			PartOfSpeech: params.Definition.Add.PartOfSpeech,
+		})
+
+		if err != nil {
+			respondError("Failed to create definition", w, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	updateParams := database.UpdateWordParams{
+		ID: word.ID,
+	}
+	if params.Word != "" {
+		updateParams.Word = params.Word
+		updateParams.SetWord = true
+	}
+	if params.Formatted != "" {
+		updateParams.Formatted = params.Formatted
+		updateParams.SetFormatted = true
+	}
+
+	word, err = cfg.queries.UpdateWord(r.Context(), updateParams)
+	if err != nil {
+		respondError("Failed to update word", w, http.StatusInternalServerError)
+		return
+	}
+	definitions, err := cfg.queries.GetDefinitionsOfWord(r.Context(), word.ID)
+	if err != nil {
+		respondError("Failed to retrieve definitions after update", w, http.StatusInternalServerError)
+		return
+	}
+
+	var status int
+	if isNewWord {
+		status = http.StatusCreated
+	} else {
+		status = http.StatusOK
+	}
+	writeResponse(getMarshallableWord(word, definitions), w, status)
+}
+
 func (cfg *apiConfig) deleteWordFromLanguage(w http.ResponseWriter, r *http.Request) {
 	languageName := r.PathValue("language")
 	language, err := cfg.queries.GetLanguage(r.Context(), languageName)
