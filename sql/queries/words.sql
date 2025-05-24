@@ -23,7 +23,7 @@ RETURNING *;
 
 -- name: GetWord :many
 SELECT * FROM words
-WHERE word = $1;
+WHERE LOWER(word) = $1;
 
 -- name: GetWordByID :one
 SELECT * FROM words
@@ -31,7 +31,7 @@ WHERE id = $1;
 
 -- name: GetWordFromLanguage :one
 SELECT * FROM words
-WHERE word = $1 AND language_id = $2;
+WHERE LOWER(word) = $1 AND language_id = $2;
 
 -- name: GetWords :many
 SELECT * FROM words;

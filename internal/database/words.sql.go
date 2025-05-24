@@ -88,7 +88,7 @@ func (q *Queries) DeleteWord(ctx context.Context, id uuid.UUID) error {
 
 const getWord = `-- name: GetWord :many
 SELECT id, created_at, updated_at, word, font_formatted, language_id FROM words
-WHERE word = $1
+WHERE LOWER(word) = $1
 `
 
 func (q *Queries) GetWord(ctx context.Context, word string) ([]Word, error) {
@@ -142,7 +142,7 @@ func (q *Queries) GetWordByID(ctx context.Context, id uuid.UUID) (Word, error) {
 
 const getWordFromLanguage = `-- name: GetWordFromLanguage :one
 SELECT id, created_at, updated_at, word, font_formatted, language_id FROM words
-WHERE word = $1 AND language_id = $2
+WHERE LOWER(word) = $1 AND language_id = $2
 `
 
 type GetWordFromLanguageParams struct {
