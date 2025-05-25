@@ -26,3 +26,6 @@ go.work.sum
 
 # DB backups
 backups/
+
+# Base data sources
+basedata/sources/
