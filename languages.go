@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -239,24 +240,31 @@ func (cfg *apiConfig) getWord(w http.ResponseWriter, r *http.Request) {
 	writeResponse(marshallableWords, w, http.StatusOK)
 }
 
-// Create a new word.
-// The word itself, and the language of origin, should be provided in the
+// Create new words.
+// The words themselves, and the language of origin, should be provided in the
 // request body. If `.language` does not exist in the database, this handler
-// creates it, and then creates the word.
-func (cfg *apiConfig) createWord(w http.ResponseWriter, r *http.Request) {
-	type reqParams struct {
-		Word     string `json:"word"`
+// creates it, and then creates the words.
+func (cfg *apiConfig) createWords(w http.ResponseWriter, r *http.Request) {
+	type reqBody struct {
 		Language string `json:"language"`
+		Words    []struct {
+			Word       string `json:"word"`
+			Formatted  string `json:"formatted"`
+			Definition struct {
+				Content      string `json:"content"`
+				PartOfSpeech string `json:"part_of_speech"`
+			} `json:"definition"`
+		} `json:"words"`
 	}
 
-	params := reqParams{}
+	params := reqBody{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&params); err != nil {
 		respondError("Could not decode request body", w, http.StatusBadRequest)
 		return
 	}
 
-	if params.Word == "" || params.Language == "" {
+	if len(params.Words) == 0 || params.Language == "" {
 		respondError("Invalid request body", w, http.StatusBadRequest)
 		return
 	}
@@ -274,20 +282,44 @@ func (cfg *apiConfig) createWord(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	word, err := cfg.queries.CreateWord(r.Context(), database.CreateWordParams{
-		Word:       params.Word,
-		LanguageID: language.ID,
-	})
-	if err != nil {
-		respondError(
-			fmt.Sprintf("Failed to create word: %s", err),
-			w,
-			getFailedCreationCode(err),
-		)
-		return
+	newWords := make([]Word, 0)
+
+	for _, word := range params.Words {
+		newWord, err := cfg.queries.CreateFormattedWord(r.Context(), database.CreateFormattedWordParams{
+			Word:       word.Word,
+			LanguageID: language.ID,
+			FontFormatted: sql.NullString{
+				String: word.Formatted,
+				Valid:  true,
+			},
+		})
+		if err != nil {
+			respondError(
+				fmt.Sprintf("Failed to create word: %s", err),
+				w,
+				getFailedCreationCode(err),
+			)
+			return
+		}
+
+		definition, err := cfg.queries.CreateDefinition(r.Context(), database.CreateDefinitionParams{
+			Content:      word.Definition.Content,
+			PartOfSpeech: word.Definition.PartOfSpeech,
+			WordID:       newWord.ID,
+		})
+		if err != nil {
+			respondError(
+				fmt.Sprintf("Failed to create definition: %s", err),
+				w,
+				getFailedCreationCode(err),
+			)
+			return
+		}
+
+		newWords = append(newWords, getMarshallableWord(newWord, []database.Definition{definition}))
 	}
 
-	writeResponse(getMarshallableWord(word, []database.Definition{}), w, http.StatusCreated)
+	writeResponse(newWords, w, http.StatusCreated)
 }
 
 // Create a word for a given language.
@@ -428,6 +460,20 @@ func (cfg *apiConfig) updateWord(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusOK
 	}
 	writeResponse(getMarshallableWord(word, definitions), w, status)
+}
+
+func (cfg *apiConfig) deleteWord(w http.ResponseWriter, r *http.Request) {
+	wordID, err := uuid.Parse(r.PathValue("word_id"))
+	if err != nil {
+		respondError("Invalid word id", w, http.StatusNotAcceptable)
+	}
+
+	err = cfg.queries.DeleteWord(r.Context(), wordID)
+	if err != nil {
+		respondError("Failed to delete word", w, http.StatusInternalServerError)
+	}
+
+	respondSuccess("Word deleted", w, http.StatusOK)
 }
 
 func (cfg *apiConfig) deleteWordFromLanguage(w http.ResponseWriter, r *http.Request) {

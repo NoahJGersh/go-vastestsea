@@ -1,15 +1,11 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"vastestsea/internal/auth"
 	"vastestsea/internal/database"
-
-	"github.com/joho/godotenv"
 
 	_ "github.com/lib/pq"
 )
@@ -21,30 +17,8 @@ type apiConfig struct {
 }
 
 func main() {
-	// Establish env
-	env := os.Getenv("VS_ENV")
-	if env == "" {
-		env = "local"
-	}
-
-	godotenv.Load(".env." + env)
-	godotenv.Load()
-
-	// Setup db connection
-	dbURL := os.Getenv("DB_URL")
-	db, err := sql.Open("postgres", dbURL)
-	if err != nil {
-		log.Fatalf("Unable to establish connection to database. Exiting.")
-	}
-	dbQueries := database.New(db)
-
-	apiCfg := apiConfig{
-		queries: dbQueries,
-		auth: auth.AuthConfig{
-			ApiKey: os.Getenv("API_KEY"),
-		},
-		hostName: os.Getenv("HOSTNAME"),
-	}
+	// Initialize environment and db connection
+	apiCfg := initializeConfig()
 
 	// Construct mux
 	serveMux := http.NewServeMux()
@@ -65,7 +39,8 @@ func main() {
 	serveMux.Handle("POST /vs/languages/{language}/words", apiCfg.getAuthenticatedHandler(apiCfg.createWordForLanguage))
 	serveMux.Handle("PUT /vs/languages/{language}/words/{word}", apiCfg.getAuthenticatedHandler(apiCfg.updateWord))
 	serveMux.Handle("DELETE /vs/languages/{language}/words/{word}", apiCfg.getAuthenticatedHandler(apiCfg.deleteWordFromLanguage))
-	serveMux.Handle("POST /vs/languages/words", apiCfg.getAuthenticatedHandler(apiCfg.createWord))
+	serveMux.Handle("POST /vs/languages/words", apiCfg.getAuthenticatedHandler(apiCfg.createWords))
+	serveMux.Handle("DELETE /vs/languages/words/{word_id}", apiCfg.getAuthenticatedHandler(apiCfg.deleteWord))
 
 	// Run server
 	server := http.Server{

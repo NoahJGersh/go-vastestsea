@@ -1,11 +1,51 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+	"vastestsea/internal/auth"
+	"vastestsea/internal/database"
+
+	"github.com/joho/godotenv"
 )
+
+/**
+ *	Initialization helpers
+ */
+
+func initializeConfig() apiConfig {
+	// Establish env
+	env := os.Getenv("VS_ENV")
+	if env == "" {
+		env = "local"
+	}
+	godotenv.Load(".env." + env)
+	godotenv.Load()
+
+	// Setup db connection
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Unable to establish connection to database. Exiting.")
+	}
+	dbQueries := database.New(db)
+
+	return apiConfig{
+		queries: dbQueries,
+		auth: auth.AuthConfig{
+			ApiKey: os.Getenv("API_KEY"),
+		},
+		hostName: os.Getenv("HOSTNAME"),
+	}
+}
+
+/**
+ *	Response helpers
+ */
 
 type responseSuccess struct {
 	Body string `json:"body"`
@@ -60,6 +100,10 @@ func getFailedCreationCode(err error) int {
 
 	return http.StatusInternalServerError
 }
+
+/**
+ *	Middleware helpers
+ */
 
 // Constructs an authenticated endpoint
 func (cfg *apiConfig) getAuthenticatedHandler(
